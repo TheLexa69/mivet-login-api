@@ -1,0 +1,25 @@
+# Entorno virtual
+.venv/
+
+# Archivos de configuración del entorno
+.env
+
+# Archivos de caché de Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Configuración de IDEs
+.idea/
+.vscode/
+
+# Archivos de logs
+*.log
+
+# Archivos de bases de datos locales
+*.sqlite3
+
+# Archivos de despliegue o empaquetado
+*.egg-info/
+dist/
+build/
