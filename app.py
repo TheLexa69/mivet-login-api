@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request
 from flask_restx import Api, Resource, fields
 import mysql.connector
 import os
@@ -11,7 +11,7 @@ import secrets
 load_dotenv()
 
 app = Flask(__name__)
-api = Api(app, doc='/docs', title="MiVet Login API", description="Gestión de login y registro")
+api = Api(app, doc='/docs', title="MiVet Login API", description="Gestión de login, registro y mascotas")
 
 # -----------------------------
 # CONFIGURACIÓN JWT
@@ -33,16 +33,16 @@ def crear_token_jwt(user_id, rol):
 # -----------------------------
 # MODELOS PARA DOCUMENTACIÓN
 # -----------------------------
+mascota_model = api.model('Mascota', {
+    'tipo': fields.String(required=True, description="Tipo de animal (perro, gato, exotico)"),
+    'nombre': fields.String(required=True, description="Nombre de la mascota"),
+    'raza': fields.String(required=True, description="Raza"),
+    'nacimiento': fields.String(required=True, description="Fecha de nacimiento (YYYY-MM-DD)")
+})
+
 login_model = api.model('LoginRequest', {
     'email': fields.String(required=True),
     'contrasena': fields.String(required=True)
-})
-
-pet_model = api.model('PetInfo', {
-    'tipo': fields.String(required=True),
-    'nombre': fields.String(required=True),
-    'raza': fields.String(required=True),
-    'nacimiento': fields.String(required=True)
 })
 
 register_model = api.model('RegisterRequest', {
@@ -51,7 +51,7 @@ register_model = api.model('RegisterRequest', {
     'contrasena': fields.String(required=True),
     'tipo_usuario': fields.String(required=True),
     'rol': fields.String(required=True),
-    'mascotas': fields.List(fields.Nested(pet_model))
+    'mascotas': fields.List(fields.Nested(mascota_model), required=True)
 })
 
 # -----------------------------
@@ -119,7 +119,7 @@ class Register(Resource):
         contrasena = data.get("contrasena")
         tipo_usuario = data.get("tipo_usuario")
         rol = data.get("rol")
-        mascotas = data.get("mascotas", [])
+        mascotas = data.get("mascotas")
 
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -135,8 +135,17 @@ class Register(Resource):
             (nombre, correo, contrasena, tipo_usuario, rol)
         )
         conn.commit()
-
         user_id = cursor.lastrowid
+
+        # Insertar mascotas
+        for m in mascotas:
+            cursor.execute(
+                "INSERT INTO Mascota (nombre, tipo, raza, fecha_nac, id_usuario) VALUES (%s, %s, %s, %s, %s)",
+                (m["nombre"], m["tipo"], m["raza"], m["nacimiento"], user_id)
+            )
+        conn.commit()
+
+        # Insertar token en tabla Auth
         token = crear_token_jwt(user_id, rol)
         user_secret = secrets.token_hex(16)
 
@@ -146,20 +155,12 @@ class Register(Resource):
         )
         conn.commit()
 
-        # Insertar mascotas si se han enviado
-        for mascota in mascotas:
-            cursor.execute(
-                "INSERT INTO Mascota (id_usuario, tipo, nombre, raza, nacimiento) VALUES (%s, %s, %s, %s, %s)",
-                (user_id, mascota["tipo"], mascota["nombre"], mascota["raza"], mascota["nacimiento"])
-            )
-        conn.commit()
-
         cursor.close()
         conn.close()
 
         return {
             "success": True,
-            "message": "Usuario registrado correctamente",
+            "message": "Usuario registrado correctamente con mascotas",
             "user_id": user_id,
             "token": token,
             "rol": rol,
