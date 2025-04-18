@@ -37,7 +37,7 @@ mascota_model = api.model('Mascota', {
     'tipo': fields.String(required=True, description="Tipo de animal (perro, gato, exotico)"),
     'nombre': fields.String(required=True, description="Nombre de la mascota"),
     'raza': fields.String(required=True, description="Raza"),
-    'nacimiento': fields.String(required=True, description="Fecha de nacimiento (YYYY-MM-DD)")
+    'fecha_nac': fields.String(required=True, description="Fecha de nacimiento (YYYY-MM-DD)")
 })
 
 login_model = api.model('LoginRequest', {
@@ -113,59 +113,64 @@ class Login(Resource):
 class Register(Resource):
     @api.expect(register_model)
     def post(self):
-        data = request.json
-        nombre = data.get("nombre")
-        correo = data.get("correo")
-        contrasena = data.get("contrasena")
-        tipo_usuario = data.get("tipo_usuario")
-        rol = data.get("rol")
-        mascotas = data.get("mascotas")
+        try:
+            data = request.json
+            nombre = data.get("nombre")
+            correo = data.get("correo")
+            contrasena = data.get("contrasena")
+            tipo_usuario = data.get("tipo_usuario")
+            rol = data.get("rol")
+            mascotas = data.get("mascotas", [])
 
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+            conn = get_db_connection()
+            cursor = conn.cursor(dictionary=True)
 
-        cursor.execute("SELECT id FROM Usuario WHERE correo = %s", (correo,))
-        if cursor.fetchone():
+            cursor.execute("SELECT id FROM Usuario WHERE correo = %s", (correo,))
+            if cursor.fetchone():
+                cursor.close()
+                conn.close()
+                return {"success": False, "message": "Este correo ya está registrado"}, 400
+
+            # Crear usuario
+            cursor.execute(
+                "INSERT INTO Usuario (nombre, correo, contrasena, tipo_usuario, rol) VALUES (%s, %s, %s, %s, %s)",
+                (nombre, correo, contrasena, tipo_usuario, rol)
+            )
+            conn.commit()
+            user_id = cursor.lastrowid
+
+            # Registrar mascotas
+            for m in mascotas:
+                cursor.execute(
+                    "INSERT INTO Mascota (nombre, tipo, raza, fecha_nac, id_usuario) VALUES (%s, %s, %s, %s, %s)",
+                    (m["nombre"], m["tipo"], m["raza"], m["fecha_nac"], user_id)
+                )
+
+            # Insertar en Auth
+            token = crear_token_jwt(user_id, rol)
+            user_secret = secrets.token_hex(16)
+
+            cursor.execute(
+                "INSERT INTO Auth (id_usuario, token, secret, service) VALUES (%s, %s, %s, %s)",
+                (user_id, token, user_secret, "MiVet")
+            )
+            conn.commit()
+
             cursor.close()
             conn.close()
-            return {"success": False, "message": "Este correo ya está registrado"}, 400
 
-        cursor.execute(
-            "INSERT INTO Usuario (nombre, correo, contrasena, tipo_usuario, rol) VALUES (%s, %s, %s, %s, %s)",
-            (nombre, correo, contrasena, tipo_usuario, rol)
-        )
-        conn.commit()
-        user_id = cursor.lastrowid
+            return {
+                "success": True,
+                "message": "Usuario y mascotas registradas correctamente",
+                "user_id": user_id,
+                "token": token,
+                "rol": rol,
+                "secret": user_secret
+            }
 
-        # Insertar mascotas
-        for m in mascotas:
-            cursor.execute(
-                "INSERT INTO Mascota (nombre, tipo, raza, fecha_nac, id_usuario) VALUES (%s, %s, %s, %s, %s)",
-                (m["nombre"], m["tipo"], m["raza"], m["nacimiento"], user_id)
-            )
-        conn.commit()
-
-        # Insertar token en tabla Auth
-        token = crear_token_jwt(user_id, rol)
-        user_secret = secrets.token_hex(16)
-
-        cursor.execute(
-            "INSERT INTO Auth (id_usuario, token, secret, service) VALUES (%s, %s, %s, %s)",
-            (user_id, token, user_secret, "MiVet")
-        )
-        conn.commit()
-
-        cursor.close()
-        conn.close()
-
-        return {
-            "success": True,
-            "message": "Usuario registrado correctamente con mascotas",
-            "user_id": user_id,
-            "token": token,
-            "rol": rol,
-            "secret": user_secret
-        }
+        except Exception as e:
+            print("❌ Error en /register:", str(e))
+            return {"success": False, "message": "Error interno del servidor: " + str(e)}, 500
 
 # -----------------------------
 # EJECUCIÓN LOCAL (opcional)
