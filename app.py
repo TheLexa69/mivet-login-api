@@ -38,12 +38,20 @@ login_model = api.model('LoginRequest', {
     'contrasena': fields.String(required=True)
 })
 
+pet_model = api.model('PetInfo', {
+    'tipo': fields.String(required=True),
+    'nombre': fields.String(required=True),
+    'raza': fields.String(required=True),
+    'nacimiento': fields.String(required=True)
+})
+
 register_model = api.model('RegisterRequest', {
     'nombre': fields.String(required=True),
     'correo': fields.String(required=True),
     'contrasena': fields.String(required=True),
     'tipo_usuario': fields.String(required=True),
-    'rol': fields.String(required=True)
+    'rol': fields.String(required=True),
+    'mascotas': fields.List(fields.Nested(pet_model))
 })
 
 # -----------------------------
@@ -111,6 +119,7 @@ class Register(Resource):
         contrasena = data.get("contrasena")
         tipo_usuario = data.get("tipo_usuario")
         rol = data.get("rol")
+        mascotas = data.get("mascotas", [])
 
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -135,6 +144,14 @@ class Register(Resource):
             "INSERT INTO Auth (id_usuario, token, secret, service) VALUES (%s, %s, %s, %s)",
             (user_id, token, user_secret, "MiVet")
         )
+        conn.commit()
+
+        # Insertar mascotas si se han enviado
+        for mascota in mascotas:
+            cursor.execute(
+                "INSERT INTO Mascota (id_usuario, tipo, nombre, raza, nacimiento) VALUES (%s, %s, %s, %s, %s)",
+                (user_id, mascota["tipo"], mascota["nombre"], mascota["raza"], mascota["nacimiento"])
+            )
         conn.commit()
 
         cursor.close()
