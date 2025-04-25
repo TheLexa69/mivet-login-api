@@ -90,8 +90,8 @@ class Login(Resource):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        cursor.execute("SELECT id, contrasena, rol FROM Usuario WHERE correo = %s AND contrasena = %s",
-                       (email, contrasena))
+        cursor.execute("SELECT id, contrasena, rol, tipo_usuario FROM Usuario WHERE correo = %s AND contrasena = %s", (email, contrasena))
+
         user = cursor.fetchone()
 
         cursor.close()
@@ -106,7 +106,8 @@ class Login(Resource):
             "success": True,
             "token": token,
             "user_id": user["id"],
-            "rol": user["rol"]
+            "rol": user["rol"],
+            "tipo_usuario": user["tipo_usuario"]
         }
 
 @api.route('/register')
@@ -165,11 +166,12 @@ class Register(Resource):
                 "user_id": user_id,
                 "token": token,
                 "rol": rol,
-                "secret": user_secret
+                "secret": user_secret,
+                "tipo_usuario": tipo_usuario
             }
 
         except Exception as e:
-            print("❌ Error en /register:", str(e))
+            print("Error en /register:", str(e))
             return {"success": False, "message": "Error interno del servidor: " + str(e)}, 500
 
 # -----------------------------
