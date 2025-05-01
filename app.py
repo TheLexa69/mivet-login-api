@@ -102,6 +102,17 @@ class Login(Resource):
 
         token = crear_token_jwt(user["id"], user["rol"])
 
+        # Actualizar token en la tabla Auth
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE Auth SET token = %s, updated_at = NOW() WHERE id_usuario = %s",
+            (token, user["id"])
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+
         return {
             "success": True,
             "token": token,
