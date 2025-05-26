@@ -20,11 +20,12 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 día
 
-def crear_token_jwt(user_id, rol):
+def crear_token_jwt(user_id, rol, tipo_usuario):
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {
         "user_id": user_id,
         "rol": rol,
+        "tipo_usuario": tipo_usuario,
         "exp": expire
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
@@ -100,7 +101,7 @@ class Login(Resource):
         if not user:
             return {"success": False, "message": "Credenciales inválidas"}, 401
 
-        token = crear_token_jwt(user["id"], user["rol"])
+        token = crear_token_jwt(user["id"], user["rol"], user["tipo_usuario"])
 
         # Actualizar token en la tabla Auth
         conn = get_db_connection()
@@ -159,7 +160,7 @@ class Register(Resource):
                 )
 
             # Insertar en Auth
-            token = crear_token_jwt(user_id, rol)
+            token = crear_token_jwt(user_id, rol, tipo_usuario)
             user_secret = secrets.token_hex(16)
 
             cursor.execute(
