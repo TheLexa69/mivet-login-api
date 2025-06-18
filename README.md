@@ -6,14 +6,14 @@
 ---
 
 ## Índice
-- [📘 Supuesto](#supuesto)
-- [⚙️ Arquitectura General](#arquitectura-general)
-- [🧪 Manual Técnico para Desarrolladores](#manual-técnico-para-desarrolladores)
-- [🚀 Endpoints y Funcionalidades](#endpoints-y-funcionalidades)
-- [🧩 Modelo de Datos y Seguridad](#modelo-de-datos-y-seguridad)
-- [🧑‍💻 Manual de Usuario](#manual-de-usuario)
-- [💡 Conclusiones](#conclusiones)
-- [⏱ Dedicación Estimada](#dedicación-estimada)
+- [Supuesto](#supuesto)
+- [Arquitectura General](#arquitectura-general)
+- [Manual Técnico para Desarrolladores](#manual-técnico-para-desarrolladores)
+- [Endpoints y Funcionalidades](#endpoints-y-funcionalidades)
+- [Modelo de Datos y Seguridad](#modelo-de-datos-y-seguridad)
+- [Manual de Usuario](#manual-de-usuario)
+- [Conclusiones](#conclusiones)
+- [Dedicación Estimada](#dedicación-estimada)
 
 ---
 
